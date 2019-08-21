@@ -72,12 +72,26 @@ func main() {
 func main() {
 	router := nullgo.Default()
 
-	router.POST("/hello/:name", func(c *nullgo.Context) {
+	router.GET("/hello/:name", func(c *nullgo.Context) {
 		name := c.Param("name")
 		c.String("hello" + name)
 	})
 }
 ```
+
+* 使用正则
+```go
+func main() {
+	router := nullgo.Default()
+	
+	roouter.GET("/user/:id([1-9]+)", func(c *nullgo.Context) {
+		id := c.Param("id)
+		c.String("id:",id)
+	}
+}
+```
+
+
 ## Log 提供的一些方法
 ```go
 func Trace(format string, v ...interface{}) {
