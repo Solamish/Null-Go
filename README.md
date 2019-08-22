@@ -1,5 +1,5 @@
 # Null-Go FrameWork
-> 使用过Golang的coder应该都知道gin这款web框架，其简洁的设计以及高效的性能和良好的生产力，让使用过的人都爱不释手。于是，我抱着学习的态度，模仿着gin的思路实现了一款简单的web框架。
+> 接触过Golang的coder应该都知道gin这款web框架，其简洁的设计以及高效的性能和良好的生产力，让使用过的人都爱不释手。于是，我抱着学习的态度，模仿着gin的思路实现了一款简单的web框架。
 ## 快速开始
 ```go
 package main
@@ -72,12 +72,26 @@ func main() {
 func main() {
 	router := nullgo.Default()
 
-	router.POST("/hello/:name", func(c *nullgo.Context) {
+	router.GET("/hello/:name", func(c *nullgo.Context) {
 		name := c.Param("name")
 		c.String("hello" + name)
 	})
 }
 ```
+
+* 使用正则
+```go
+func main() {
+	router := nullgo.Default()
+	
+	roouter.GET("/user/:id([1-9]+)", func(c *nullgo.Context) {
+		id := c.Param("id)
+		c.String("id:",id)
+	}
+}
+```
+
+
 ## Log 提供的一些方法
 ```go
 func Trace(format string, v ...interface{}) {
