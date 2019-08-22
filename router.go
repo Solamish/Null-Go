@@ -2,6 +2,7 @@ package nullgo
 
 import (
 	"fmt"
+	"github.com/unknwon/com"
 	"net/http"
 	"regexp"
 	"strings"
@@ -16,16 +17,22 @@ const (
 )
 
 type Router struct {
-	params Params
-	regex  *regexp.Regexp
+	ctx *Context
+	regex  map[string]*regexp.Regexp
 	mu     sync.RWMutex
 	router []handlerMap
 	wsMap  map[string]WebSocketConfig
 }
 
+var key = ""
+var k = 1
+
+
 type handlerMap map[string]HandlerFunc
 
 type HandlerFunc func(*Context)
+
+var orderMap = make(map[string]int)
 
 var methodMap = map[string]int{
 	"GET":    GET,
@@ -48,9 +55,10 @@ func (r *Router) Init() {
 		PUT:    make(map[string]HandlerFunc),
 		DELETE: make(map[string]HandlerFunc),
 	}
-	r.params = make(Params, 10)
+	//r.params = make(Params, 10)
 	r.wsMap = make(map[string]WebSocketConfig, 1)
-
+	r.regex = make(map[string]*regexp.Regexp, 10)
+	r.ctx = &Context{Params:make(Params,20)}
 }
 
 func (r *Router) add(method int, uri string, handle HandlerFunc) {
@@ -76,11 +84,11 @@ func (r *Router) add(method int, uri string, handle HandlerFunc) {
 	var expr string
 
 	params = make(Params, 10)
-	j := 0
+
 	for i, part := range parts {
 
 		if strings.HasPrefix(part, ":") {
-
+			key = com.ToStr(parts[1:len(parts)-1])
 			expr = "([^/]+)"
 			if index := strings.Index(part, "("); index != -1 {
 				expr = part[index:]
@@ -88,10 +96,13 @@ func (r *Router) add(method int, uri string, handle HandlerFunc) {
 				fmt.Println(part)
 			}
 
-			params[j].key = strings.TrimLeft(part, ":")
+			params[k].key = strings.TrimLeft(part, ":")
 			parts[i] = ""
-			j++
+
+		} else {
+			key = com.ToStr(parts[1:])
 		}
+
 	}
 
 	//②对uri进行重组,并组装正则
@@ -103,14 +114,20 @@ func (r *Router) add(method int, uri string, handle HandlerFunc) {
 		panic(regexErr)
 		return
 	}
-	r.regex = regex
-	r.params = params
+	regexMap := r.regex
+	regexMap[key] = regex
+	//r.params = params
+	ctx := r.ctx
+	ctx.Params[k].key = params[k].key
 	//③对uri再次重组
 	//如： /user/:
 	length := len(uri)
 	if uri[length-1] == '/' {
 		uri += ":"
 	}
+	order := orderMap
+	order[key] = k
+	k++
 
 	//④检查uri是否已经被注册
 	for _, handlerMaps := range r.router {
@@ -127,7 +144,14 @@ func (r *Router) add(method int, uri string, handle HandlerFunc) {
 }
 
 func (r *Router) forward(w http.ResponseWriter, req *http.Request) {
-	ctx := &Context{}
+	ctx := r.ctx
+
+
+
+
+
+
+
 	ctx.ResponseWriter = w
 	ctx.Request = req
 	rawURI := req.RequestURI
@@ -137,13 +161,18 @@ func (r *Router) forward(w http.ResponseWriter, req *http.Request) {
 	methodToInt := methodMap[method]
 	arr := strings.Split(rawURI, "?")
 	uri := arr[0]
+	array := strings.Split(uri,"/")
+	key := com.ToStr(array[1:len(array)-1])
+	k := orderMap[key]
+    if regex, ok := r.regex[key]; ok {
+		if ok := regex.MatchString(uri); ok {
+			matches := regex.FindStringSubmatch(uri)
+			if len(matches[0]) == len(uri) {
+				for _, match := range matches[1:] {
 
-	if ok := r.regex.MatchString(uri); ok {
-		matches := r.regex.FindStringSubmatch(uri)
-		if len(matches[0]) == len(uri) {
-			for i, match := range matches[1:] {
-				r.params[i].value = match
-				uri = strings.Replace(uri, match, ":", -1)
+					ctx.Params[k].value = match
+					uri = strings.Replace(uri, match, ":", -1)
+				}
 			}
 		}
 	}
@@ -157,7 +186,7 @@ func (r *Router) forward(w http.ResponseWriter, req *http.Request) {
 				w.Write(QuickStringToBytes("Method not allowed"))
 				printError("| 405 |          | %s            %s \n", method, rawURI)
 			}
-			ctx.Params = r.params
+			//ctx.Params = r.params
 
 			//如果http协议需要升级为websocket
 			if upgrade == "websocket" {
