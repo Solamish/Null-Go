@@ -40,30 +40,30 @@ func Trace(format string, v ...interface{}) {
 }
 
 func Error(format string, v ...interface{}) {
-	if level <= LevelTrace {
+	if level <= LevelError {
 		NullLogger.Printf("[BULL-error] "+format, v...)
 	}
 }
 
 func Warn(format string, v ...interface{}) {
-	if level <= LevelTrace {
+	if level <= LevelWarn {
 		NullLogger.Printf("[BULL-warn] "+format, v...)
 	}
 }
 
 func Info(format string, v ...interface{}) {
-	if level <= LevelTrace {
+	if level <= LevelInfo {
 		NullLogger.Printf("[BULL-info] "+format, v...)
 	}
 }
 func Debug(format string, v ...interface{}) {
-	if level <= LevelTrace {
+	if level <= LevelDebug {
 		NullLogger.Printf("[BULL-debug] "+format, v...)
 	}
 }
 
 func printError(format string, v ...interface{})  {
-	if level <= LevelTrace {
+	if level <= LevelError {
 		NullLogger2.Printf(format, v...)
 	}
 }
